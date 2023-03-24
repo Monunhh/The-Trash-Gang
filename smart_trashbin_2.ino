@@ -1,7 +1,6 @@
 // Include Libraries
-#include "Arduino.h"
-#include "NewPing.h"
-#include "Servo.h"
+#include <Arduino.h>
+#include <Servo.h>
 
 
 // Pin Definitions
@@ -13,14 +12,10 @@
 
 // Global variables and defines
 const int servo9gRestPosition   = 0;  //Starting position
-const int servo9gTargetPosition = 90 //Position when event is detected
+const int servo9gTargetPosition = 135; //Position when event is detected
+const int triggeredDist = 80; // Triggered position for scanner (cm)
 // object initialization
-NewPing hcsr04(HCSR04_PIN_TRIG,HCSR04_PIN_ECHO);
-Servo servo9g;
-
-
-// define vars for testing menu
-const int timeout = 10000;       //define timeout of 10 sec
+Servo servo;
 
 // Setup the essentials for your circuit to work. It runs first every time your circuit is powered with electricity.
 void setup() 
@@ -28,19 +23,36 @@ void setup()
     // Setup Serial which is useful for debugging
     // Use the Serial Monitor to view printed messages
     Serial.begin(9600);
-    servo9g.attach(SERVO9G_PIN_SIG);
+    pinMode(HCSR04_PIN_TRIG, OUTPUT);
+    pinMode(HCSR04_PIN_ECHO, INPUT);
+    servo.attach(SERVO9G_PIN_SIG);
 }
 
 void loop()
 {
-  hcListener(hcsr04.ping_cm());
+  // 0.01723 times the output of the ultra sonic reader gives us the required
+  hcListener(readUltrasonicDistance(HCSR04_PIN_TRIG, HCSR04_PIN_ECHO) * 0.01723);
   delay(60); 
 }
 
-void hcListen(int distance)
+long readUltrasonicDistance(int triggerPin, int echoPin)
+{
+  pinMode(triggerPin, OUTPUT);  // Clear the trigger
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigger pin to HIGH state for 10 microseconds
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(triggerPin, LOW);
+  pinMode(echoPin, INPUT);
+  // Reads the echo pin, and returns the sound wave travel time in microseconds
+  return pulseIn(echoPin, HIGH);
+}
+
+void hcListener(int distance)
 {
   // distance in cm
-  if (distance < 2)
+  if (distance < triggeredDist)
   {
     rotateServo(servo9gTargetPosition);
   } else {
@@ -51,7 +63,6 @@ void hcListen(int distance)
 
 void rotateServo(int deg)
 {
-  servo9g.write(deg);
-  // duration for disposal
-  delay(1000);  
+  servo.write(deg);
+  // duration for disposal 
 }
